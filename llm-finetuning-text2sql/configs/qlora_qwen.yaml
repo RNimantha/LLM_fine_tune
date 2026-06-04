@@ -1,0 +1,65 @@
+# QLoRA SFT config for text-to-SQL.
+# Defaults are tuned to run on a Colab Pro T4 (16 GB). See comments to scale up on L4/A100.
+
+model:
+  # 1.5B is the safe default on T4. For L4/A100 bump to Qwen/Qwen2.5-3B-Instruct or 7B-Instruct.
+  base_model: "Qwen/Qwen2.5-1.5B-Instruct"
+  trust_remote_code: false
+
+data:
+  dataset_name: "b-mc2/sql-create-context"   # columns: question, context, answer
+  test_size: 0.05
+  seed: 42
+  # Cap for fast first runs; set null to use the full dataset.
+  max_train_samples: 8000
+  max_eval_samples: 500
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bias: "none"
+  # All linear projections (QLoRA-paper recommendation for best quality).
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+quant:
+  load_in_4bit: true
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_compute_dtype: "bfloat16"
+
+training:
+  output_dir: "outputs/qwen2.5-1.5b-text2sql-qlora"
+  num_train_epochs: 1
+  per_device_train_batch_size: 2      # T4-safe. L4: 4, A100: 8
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8      # effective batch = 2 * 8 = 16
+  learning_rate: 0.0002               # 2e-4 — standard QLoRA LR
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.03
+  weight_decay: 0.0
+  max_length: 1024
+  packing: false                      # set true to pack short examples for throughput
+  gradient_checkpointing: true
+  optim: "paged_adamw_8bit"
+  bf16: true
+  logging_steps: 10
+  eval_strategy: "steps"
+  eval_steps: 100
+  save_strategy: "steps"
+  save_steps: 200
+  save_total_limit: 2
+  report_to: "tensorboard"
+  seed: 42
+
+hub:
+  # Set push_to_hub: true and a repo id to publish (needs `huggingface-cli login`).
+  push_to_hub: false
+  hub_model_id: null                  # e.g. "your-username/qwen2.5-1.5b-text2sql"

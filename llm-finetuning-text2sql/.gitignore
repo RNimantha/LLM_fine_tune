@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Training artifacts
+outputs/
+runs/
+*.log
+wandb/
+.ipynb_checkpoints/
+
+# Secrets / env
+.env
+*.token
+
+# OS
+.DS_Store
